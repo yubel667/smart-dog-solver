@@ -15,43 +15,83 @@ class BoardVisualizer:
     }
 
     @classmethod
-    def render(cls, board: Board) -> str:
+    def render(cls, board: Board, with_indices: bool = True) -> str:
         """
         Renders the board using a 3x3 sub-grid per cell.
+        Transposes X and Y so that board.place(v, x, y) uses x as Row and y as Column.
         Each cell center contains the piece ID letter.
-        Edges contain path connection lines.
+        Edges contain path connection lines (- and |).
         """
         cell_size = 3
         canvas_size = board.size * cell_size
         canvas = [[" " for _ in range(canvas_size)] for _ in range(canvas_size)]
 
-        # 1. Draw Pieces
+        # 1. Draw Pieces and Connections
         for piece_id, (variant, rx, ry) in board.placed_pieces.items():
             symbol = cls.SYMBOLS.get(piece_id, "?")
             
             for (dx, dy) in variant.footprint:
-                x, y = rx + dx, ry + dy
-                cx, cy = x * cell_size + 1, y * cell_size + 1
+                # Transpose: rx is row, ry is col
+                row, col = rx + dx, ry + dy
+                cx, cy = col * cell_size + 1, row * cell_size + 1
                 
                 # Center: Piece ID letter
                 canvas[cy][cx] = symbol
                 
-                # Edges: Path connections (REMOVED)
+                # Edges: Path connections (only for obstacles, not Dog/Trainer)
+                if symbol not in ["D", "T"]:
+                    connections = variant.routing_info_at(dx, dy)
+                    for d in connections:
+                        # Determine neighbor coordinates
+                        nrow, ncol = row, col
+                        if d == Direction.UP: ncol -= 1
+                        elif d == Direction.DOWN: ncol += 1
+                        elif d == Direction.LEFT: nrow -= 1
+                        elif d == Direction.RIGHT: nrow += 1
+                        
+                        # Show connection if:
+                        # 1. Neighbor is a piece
+                        # 2. It's a Yellow Seesaw (entry/exit arrows)
+                        # 3. It's a Blue Bridge tunnel leg (connects DOWN only)
+                        is_piece_neighbor = board.get_occupant(nrow, ncol, Level.GROUND) or board.get_occupant(nrow, ncol, Level.BRIDGE)
+                        is_seesaw = (symbol == "Y")
+                        is_bridge_tunnel = (symbol == "B" and d == Direction.RIGHT)
+                        
+                        if is_piece_neighbor or is_seesaw or is_bridge_tunnel:
+                            if d == Direction.UP: # dy=-1 -> Left
+                                canvas[cy][cx - 1] = "-"
+                            elif d == Direction.DOWN: # dy=1 -> Right
+                                canvas[cy][cx + 1] = "-"
+                            elif d == Direction.LEFT: # dx=-1 -> Up
+                                canvas[cy - 1][cx] = "|"
+                            elif d == Direction.RIGHT: # dx=1 -> Down
+                                canvas[cy + 1][cx] = "|"
 
         # 2. Assemble Output
         output = []
-        # Header
-        header = "      0     1     2     3     4"
-        output.append(header)
+        if with_indices:
+            # Header
+            header = "      0     1     2     3     4"
+            output.append(header)
         
-        for y in range(board.size):
-            output.append("   +---+---+---+---+---+")
+        for r in range(board.size):
+            if with_indices:
+                output.append("   +---+---+---+---+---+")
+            else:
+                output.append("+---+---+---+---+---+")
             for sub_y in range(cell_size):
-                line = f" {y if sub_y==1 else ' '} |"
-                for x in range(board.size):
-                    cell_content = "".join(canvas[y*cell_size + sub_y][x*cell_size : (x+1)*cell_size])
+                if with_indices:
+                    line = f" {r if sub_y==1 else ' '} |"
+                else:
+                    line = "|"
+                for c in range(board.size):
+                    cell_content = "".join(canvas[r*cell_size + sub_y][c*cell_size : (c+1)*cell_size])
                     line += cell_content + "|"
                 output.append(line)
-        output.append("   +---+---+---+---+---+")
+        
+        if with_indices:
+            output.append("   +---+---+---+---+---+")
+        else:
+            output.append("+---+---+---+---+---+")
 
         return "\n".join(output)

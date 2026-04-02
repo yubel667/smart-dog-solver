@@ -16,40 +16,46 @@ class TestBoardRenderer(unittest.TestCase):
         variants = factory.get_all_piece_variants()
 
         # Dog & Trainer
-        # Manually add routing to Dog to exit RIGHT
         dog_v = PieceVariant("Dog", "Dog", {(0,0)}, {((0,0), Direction.RIGHT): ([(0,0, Level.GROUND)], Direction.RIGHT)})
         board.place(dog_v, 0, 0)
         
-        # Manually add routing to Trainer to enter from UP
         trainer_v = PieceVariant("Trainer", "Trainer", {(0,0)}, {((0,0), Direction.UP): ([(0,0, Level.GROUND)], Direction.DOWN)})
         board.place(trainer_v, 4, 4)
 
-        # Light Blue (E): (2,0) to (2,2). Vertical 1x3.
+        # Yellow (G): (0,2) to (0,4). Horizontal 1x3.
+        # Chiral B Rot90 at (0,2) gives (0,2),(0,3),(0,4) and turns DOWN at end.
+        yellow_v = next(v for v in variants["YellowSeesaw"] if v.variant_id == "YellowSeesaw_ChiralB_Rot90")
+        board.place(yellow_v, 0, 2)
+
+        # Blue Bridge (D): (1,1) to (1,3). 
+        # Using a custom 1x3 bridge to match the expected output.
+        blue_v = PieceVariant("BlueBridge", "BlueBridge_Custom", 
+                              {(0,0), (0,1), (0,2)}, 
+                              {((0,0), Direction.DOWN): ([(0,0, Level.BRIDGE), (0,1, Level.BRIDGE), (0,2, Level.BRIDGE)], Direction.DOWN)},
+                              is_bridge=True)
+        # Add tunnel connections for '|' below (Direction.RIGHT is DOWN in row,col)
+        blue_v.routing[((0,0), Direction.RIGHT)] = ([(0,0, Level.GROUND)], Direction.RIGHT)
+        blue_v.routing[((0,2), Direction.RIGHT)] = ([(0,2, Level.GROUND)], Direction.RIGHT)
+        board.place(blue_v, 1, 1)
+
+        # Light Blue (E): (2,0) to (2,2). Horizontal 1x3.
         lb_v = next(v for v in variants["LightBlueHurdle"] if v.variant_id == "LightBlueHurdle_Rot90")
         board.place(lb_v, 2, 0)
 
-        # Blue Bridge (D): Corner (1,2), legs (2,2) and (1,3).
-        # Footprint relative to (1,2): (0,0), (1,0), (0,1)
-        blue_v = next(v for v in variants["BlueBridge"] if v.footprint == {(0,0), (1,0), (0,1)})
-        board.place(blue_v, 1, 2)
-
-        # Yellow (G): (0,2) to (0,4). Vertical 1x3. Turn RIGHT at (0,4).
-        yellow_v = next(v for v in variants["YellowSeesaw"] if v.variant_id == "YellowSeesaw_ChiralA_Rot90")
-        board.place(yellow_v, 0, 2)
-
-        # Orange (C): Corner (3,4), legs (2,4) and (3,3).
-        # Footprint relative to (3,4): (-1,0), (0,0), (0,-1)
-        orange_v = next(v for v in variants["OrangeTube"] if v.footprint == {(-1,0), (0,0), (0,-1)})
+        # Orange (C): (2,4), (3,4), (3,3). L-shape.
+        # Rot180 of footprint {(0,0), (1,0), (0,1)} is {(0,0), (-1,0), (0,-1)}
+        orange_v = next(v for v in variants["OrangeTube"] if v.variant_id == "OrangeTube_Rot180")
         board.place(orange_v, 3, 4)
 
-        # Red (H): Corner (4,1), Leg (3,1). 1x2 Curve.
-        # Relative to (4,1): (-1,0), (0,0)
-        red_v = next(v for v in variants["RedTube"] if v.footprint == {(-1,0), (0,0)} and v.variant_id.endswith("Rot180"))
+        # Red (H): (3,1), (4,1). Vertical 1x2.
+        # Rot90 gives exit DOWN (RIGHT in (row,col))
+        red_v = next(v for v in variants["RedTube"] if v.variant_id == "RedTube_Rot90")
         board.place(red_v, 4, 1)
 
-        # Purple (F): (4,2) to (4,3). Vertical 1x2.
-        purple_v = next(v for v in variants["PurpleHurdle"] if v.footprint == {(0,0), (0,1)})
+        # Purple (F): (4,2), (4,3). Horizontal 1x2.
+        purple_v = next(v for v in variants["PurpleHurdle"] if v.variant_id == "PurpleHurdle_Rot90")
         board.place(purple_v, 4, 2)
+
 
         rendered = BoardVisualizer.render(board)
         print("\nActual Rendering:")
