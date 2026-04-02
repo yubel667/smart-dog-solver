@@ -80,23 +80,21 @@ class Solver:
             return None
 
         for start_dir in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
-            res = self._dfs(dog_pos, start_dir, initial_board, set(remaining_piece_ids), {dog_pos}, None, [(dog_pos[0], dog_pos[1], "Dog")])
+            # Start at GROUND level
+            res = self._dfs(dog_pos, Level.GROUND, start_dir, initial_board, set(remaining_piece_ids), {(dog_pos[0], dog_pos[1], Level.GROUND)}, None, [(dog_pos[0], dog_pos[1], "Dog")])
             if res: return res
         return None
 
-    def _get_piece_at(self, board, x, y):
-        for p_id, (v, rx, ry) in board.placed_pieces.items():
-            dx, dy = x - rx, y - ry
-            if (dx, dy) in v.footprint:
-                if not v.is_bridge and board.grid[x][y].get(Level.GROUND) == p_id:
-                    return v, dx, dy
-                if v.is_bridge and board.grid[x][y].get(Level.BRIDGE) == p_id:
-                    return v, dx, dy
+    def _get_piece_at(self, board, x, y, level):
+        p_id = board.get_occupant(x, y, level)
+        if p_id:
+            v, rx, ry = board.placed_pieces[p_id]
+            return v, x - rx, y - ry
         return None, 0, 0
 
-    def _dfs(self, curr_pos, incoming_dir, board, remaining_piece_ids, visited, prev_piece_id, current_path):
+    def _dfs(self, curr_pos, curr_level, incoming_dir, board, remaining_piece_ids, visited, prev_piece_id, current_path):
         x, y = curr_pos
-        piece_v, dx, dy = self._get_piece_at(board, x, y)
+        piece_v, dx, dy = self._get_piece_at(board, x, y, curr_level)
         
         if piece_v:
             # Yellow Seesaw 1-direction check
@@ -123,48 +121,65 @@ class Solver:
             curr_piece_id = None
 
         next_x, next_y = x + exit_dir.dx, y + exit_dir.dy
-        next_pos = (next_x, next_y)
+        next_pos_2d = (next_x, next_y)
         
         if not board.is_in_bounds(next_x, next_y):
             return None
 
+        # Check for Trainer (always GROUND)
         if board.get_occupant(next_x, next_y, Level.GROUND) == "Trainer":
             final_path = current_path + [(next_x, next_y, "Trainer")]
             if not remaining_piece_ids:
-                if self._all_piece_squares_visited(board, visited | {next_pos}):
+                if self._all_piece_squares_visited(board, visited | {(next_x, next_y, Level.GROUND)}):
                     return board, final_path
             return None
 
-        if next_pos in visited:
-            return None
-
-        next_piece_v, _, _ = self._get_piece_at(board, next_x, next_y)
-        if next_piece_v:
-            return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id, current_path + [(next_x, next_y, next_piece_v.piece_id)])
-        else:
-            if not remaining_piece_ids:
-                return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id, current_path + [(next_x, next_y, None)])
+        # Try possible next levels
+        for next_level in [Level.GROUND, Level.BRIDGE]:
+            if (next_x, next_y, next_level) in visited:
+                continue
                 
-            for p_id in list(remaining_piece_ids):
-                for v in self.all_variants[p_id]:
-                    for (v_dx, v_dy) in v.footprint:
-                        root_x, root_y = next_x - v_dx, next_y - v_dy
-                        if board.can_place(v, root_x, root_y):
-                            conns = self.variant_ports[v.variant_id].get((v_dx, v_dy), set())
-                            if exit_dir.reverse() in conns:
-                                board.place(v, root_x, root_y)
-                                res = self._dfs(next_pos, exit_dir, board, remaining_piece_ids - {p_id}, visited | {next_pos}, curr_piece_id, current_path + [(next_x, next_y, p_id)])
-                                if res: return res
-                                board.remove(p_id)
-            return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id, current_path + [(next_x, next_y, None)])
-
+            next_piece_v, n_dx, n_dy = self._get_piece_at(board, next_x, next_y, next_level)
+            if next_piece_v:
+                conns = self.variant_ports[next_piece_v.variant_id].get((n_dx, n_dy), set())
+                if exit_dir.reverse() in conns:
+                    res = self._dfs(next_pos_2d, next_level, exit_dir, board, remaining_piece_ids, visited | {(next_x, next_y, next_level)}, curr_piece_id, current_path + [(next_x, next_y, next_piece_v.piece_id)])
+                    if res: return res
+            else:
+                # Potential empty square or piece placement (only on GROUND)
+                if next_level == Level.GROUND and not board.get_occupant(next_x, next_y, Level.BRIDGE):
+                    if not remaining_piece_ids:
+                        res = self._dfs(next_pos_2d, Level.GROUND, exit_dir, board, remaining_piece_ids, visited | {(next_x, next_y, Level.GROUND)}, curr_piece_id, current_path + [(next_x, next_y, None)])
+                        if res: return res
+                    else:
+                        # Try placing remaining pieces
+                        for p_id in list(remaining_piece_ids):
+                            for v in self.all_variants[p_id]:
+                                target_level = Level.BRIDGE if v.is_bridge else Level.GROUND
+                                # Only place on the level we are currently checking
+                                if target_level != next_level: continue
+                                
+                                for (v_dx, v_dy) in v.footprint:
+                                    root_x, root_y = next_x - v_dx, next_y - v_dy
+                                    if board.can_place(v, root_x, root_y):
+                                        conns = self.variant_ports[v.variant_id].get((v_dx, v_dy), set())
+                                        if exit_dir.reverse() in conns:
+                                            board.place(v, root_x, root_y)
+                                            res = self._dfs(next_pos_2d, next_level, exit_dir, board, remaining_piece_ids - {p_id}, visited | {(next_x, next_y, next_level)}, curr_piece_id, current_path + [(next_x, next_y, p_id)])
+                                            if res: return res
+                                            board.remove(p_id)
+                        # Also try passing through empty square if allowed
+                        res = self._dfs(next_pos_2d, Level.GROUND, exit_dir, board, remaining_piece_ids, visited | {(next_x, next_y, Level.GROUND)}, curr_piece_id, current_path + [(next_x, next_y, None)])
+                        if res: return res
+        return None
 
     def _all_piece_squares_visited(self, board, visited):
         for p_id, (v, rx, ry) in board.placed_pieces.items():
             if p_id in ["Dog", "Trainer"]: continue
+            level = Level.BRIDGE if v.is_bridge else Level.GROUND
             for dx, dy in v.footprint:
                 conns = self.variant_ports[v.variant_id].get((dx, dy), set())
                 if conns: # Only require visiting navigable squares
-                    if (rx + dx, ry + dy) not in visited:
+                    if (rx + dx, ry + dy, level) not in visited:
                         return False
         return True
