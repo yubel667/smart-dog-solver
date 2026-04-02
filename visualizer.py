@@ -17,65 +17,71 @@ class BoardVisualizer:
     @classmethod
     def render(cls, board: Board, with_indices: bool = True) -> str:
         """
-        Renders the board using a 3x3 sub-grid per cell.
-        Transposes X and Y so that board.place(v, x, y) uses x as Row and y as Column.
-        Each cell center contains the piece ID letter.
-        Edges contain path connection lines (- and |).
+        Renders the 5x5 board into a string representation.
+        
+        Args:
+            board: The board to render.
+            with_indices: If True, include row/column indices and extra spacing.
+        
+        Note: The rendering transposes X and Y so that board.place(v, x, y) 
+              treats x as the Row and y as the Column.
         """
         cell_size = 3
         canvas_size = board.size * cell_size
         canvas = [[" " for _ in range(canvas_size)] for _ in range(canvas_size)]
 
-        # 1. Draw Pieces and Connections
+        # Map Direction to sub-grid offset and character
+        # UP    (0, -1) -> Row delta 0, Col delta -1 -> Left
+        # DOWN  (0, 1)  -> Row delta 0, Col delta 1  -> Right
+        # LEFT  (-1, 0) -> Row delta -1, Col delta 0 -> Top
+        # RIGHT (1, 0)  -> Row delta 1, Col delta 0  -> Bottom
+        DIR_MAP = {
+            Direction.UP:    (0, -1, "-"),
+            Direction.DOWN:  (0, 1,  "-"),
+            Direction.LEFT:  (-1, 0, "|"),
+            Direction.RIGHT: (1, 0,  "|")
+        }
+
+        # 1. Fill Canvas
         for piece_id, (variant, rx, ry) in board.placed_pieces.items():
             symbol = cls.SYMBOLS.get(piece_id, "?")
             
             for (dx, dy) in variant.footprint:
                 # Transpose: rx is row, ry is col
                 row, col = rx + dx, ry + dy
+                # Sub-grid center: cy is row-major y, cx is col-major x
                 cx, cy = col * cell_size + 1, row * cell_size + 1
                 
-                # Center: Piece ID letter
                 canvas[cy][cx] = symbol
                 
-                # Edges: Path connections (only for obstacles, not Dog/Trainer)
+                # Render connections for non-endpoint pieces
                 if symbol not in ["D", "T"]:
                     connections = variant.routing_info_at(dx, dy)
                     for d in connections:
-                        if d == Direction.UP: # dy=-1 -> Left
-                            canvas[cy][cx - 1] = "-"
-                        elif d == Direction.DOWN: # dy=1 -> Right
-                            canvas[cy][cx + 1] = "-"
-                        elif d == Direction.LEFT: # dx=-1 -> Up
-                            canvas[cy - 1][cx] = "|"
-                        elif d == Direction.RIGHT: # dx=1 -> Down
-                            canvas[cy + 1][cx] = "|"
+                        dy_off, dx_off, char = DIR_MAP[d]
+                        canvas[cy + dy_off][cx + dx_off] = char
 
-        # 2. Assemble Output
+        # 2. Assemble Rows
         output = []
         if with_indices:
-            # Header
-            header = "      0     1     2     3     4"
-            output.append(header)
+            output.append("      0     1     2     3     4")
+        
+        sep = "+---+---+---+---+---+"
+        margin = "   " if with_indices else ""
         
         for r in range(board.size):
-            if with_indices:
-                output.append("   +---+---+---+---+---+")
-            else:
-                output.append("+---+---+---+---+---+")
+            output.append(f"{margin}{sep}")
             for sub_y in range(cell_size):
                 if with_indices:
-                    line = f" {r if sub_y==1 else ' '} |"
+                    label = f" {r} " if sub_y == 1 else "   "
+                    line = f"{label}|"
                 else:
                     line = "|"
+                
                 for c in range(board.size):
-                    cell_content = "".join(canvas[r*cell_size + sub_y][c*cell_size : (c+1)*cell_size])
-                    line += cell_content + "|"
+                    cell_chars = canvas[r * cell_size + sub_y][c * cell_size : (c + 1) * cell_size]
+                    line += "".join(cell_chars) + "|"
                 output.append(line)
         
-        if with_indices:
-            output.append("   +---+---+---+---+---+")
-        else:
-            output.append("+---+---+---+---+---+")
-
+        output.append(f"{margin}{sep}")
         return "\n".join(output)
