@@ -79,7 +79,7 @@ class Solver:
             return None
 
         for start_dir in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
-            res = self._dfs(dog_pos, start_dir, initial_board, set(remaining_piece_ids), {dog_pos}, None)
+            res = self._dfs(dog_pos, start_dir, initial_board, set(remaining_piece_ids), {dog_pos}, None, [(dog_pos[0], dog_pos[1], "Dog")])
             if res: return res
         return None
 
@@ -93,7 +93,7 @@ class Solver:
                     return v, dx, dy
         return None, 0, 0
 
-    def _dfs(self, curr_pos, incoming_dir, board, remaining_piece_ids, visited, prev_piece_id):
+    def _dfs(self, curr_pos, incoming_dir, board, remaining_piece_ids, visited, prev_piece_id, current_path):
         x, y = curr_pos
         piece_v, dx, dy = self._get_piece_at(board, x, y)
         
@@ -128,9 +128,10 @@ class Solver:
             return None
 
         if board.get_occupant(next_x, next_y, Level.GROUND) == "Trainer":
+            final_path = current_path + [(next_x, next_y, "Trainer")]
             if not remaining_piece_ids:
                 if self._all_piece_squares_visited(board, visited | {next_pos}):
-                    return board
+                    return board, final_path
             return None
 
         if next_pos in visited:
@@ -138,10 +139,10 @@ class Solver:
 
         next_piece_v, _, _ = self._get_piece_at(board, next_x, next_y)
         if next_piece_v:
-            return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id)
+            return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id, current_path + [(next_x, next_y, next_piece_v.piece_id)])
         else:
             if not remaining_piece_ids:
-                return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id)
+                return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id, current_path + [(next_x, next_y, None)])
                 
             for p_id in list(remaining_piece_ids):
                 for v in self.all_variants[p_id]:
@@ -151,10 +152,11 @@ class Solver:
                             conns = self.variant_ports[v.variant_id].get((v_dx, v_dy), set())
                             if exit_dir.reverse() in conns:
                                 board.place(v, root_x, root_y)
-                                res = self._dfs(next_pos, exit_dir, board, remaining_piece_ids - {p_id}, visited | {next_pos}, curr_piece_id)
+                                res = self._dfs(next_pos, exit_dir, board, remaining_piece_ids - {p_id}, visited | {next_pos}, curr_piece_id, current_path + [(next_x, next_y, p_id)])
                                 if res: return res
                                 board.remove(p_id)
-            return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id)
+            return self._dfs(next_pos, exit_dir, board, remaining_piece_ids, visited | {next_pos}, curr_piece_id, current_path + [(next_x, next_y, None)])
+
 
     def _all_piece_squares_visited(self, board, visited):
         for p_id, (v, rx, ry) in board.placed_pieces.items():
