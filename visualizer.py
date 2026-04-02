@@ -76,8 +76,8 @@ class BoardVisualizer:
                         connections = variant.routing_info_at(dx, dy)
                         for d in connections:
                             dy_off, dx_off, char = DIR_MAP[d]
-                            # Use '=' for bridge horizontal connections
-                            if variant.is_bridge and char == "-":
+                            # Use '=' for bridge horizontal connections ONLY if square is shared
+                            if variant.is_bridge and char == "-" and len(pieces) > 1:
                                 char = "="
                             
                             # If we are the secondary piece, we don't want to overwrite 

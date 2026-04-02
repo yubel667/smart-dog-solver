@@ -93,6 +93,7 @@ class Solver:
         return None, 0, 0
 
     def _dfs(self, curr_pos, curr_level, incoming_dir, board, remaining_piece_ids, visited, prev_piece_id, current_path):
+        # print(f"DEBUG: at {curr_pos} {curr_level} incoming {incoming_dir} remaining {remaining_piece_ids}")
         x, y = curr_pos
         piece_v, dx, dy = self._get_piece_at(board, x, y, curr_level)
         
