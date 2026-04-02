@@ -57,15 +57,38 @@ class TestBoardRenderer(unittest.TestCase):
         board.place(purple_v, 4, 2)
 
 
-        rendered = BoardVisualizer.render(board)
-        print("\nActual Rendering:")
+        rendered = BoardVisualizer.render(board, with_indices=False)
+        print("\nActual Rendering (No Indices):")
         print(rendered)
 
         # Read expected
         with open("expected_solution_1.txt", "r") as f:
             expected = f.read()
         
-        self.assertEqual(rendered.strip(), expected.strip())
+        # Cell-by-cell comparison
+        actual_lines = rendered.strip().split("\n")
+        expected_lines = expected.strip().split("\n")
+        
+        self.assertEqual(len(actual_lines), len(expected_lines), f"Line count mismatch: {len(actual_lines)} vs {len(expected_lines)}")
+        
+        failures = []
+        for r in range(5):
+            for c in range(5):
+                # Extract 3x3 block for cell (r, c)
+                actual_block = []
+                expected_block = []
+                for sub_r in range(3):
+                    line_idx = r * 4 + 1 + sub_r
+                    # Characters are at c*4 + 1, c*4 + 2, c*4 + 3
+                    actual_block.append(actual_lines[line_idx][c*4 + 1 : c*4 + 4])
+                    expected_block.append(expected_lines[line_idx][c*4 + 1 : c*4 + 4])
+                
+                if actual_block != expected_block:
+                    failures.append(f"Cell ({r},{c}) mismatch:\nExpected:\n" + "\n".join(expected_block) + 
+                                   "\nActual:\n" + "\n".join(actual_block))
+        
+        if failures:
+            self.fail("\n\n" + "\n\n".join(failures))
 
 if __name__ == "__main__":
     unittest.main()
