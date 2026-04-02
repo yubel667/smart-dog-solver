@@ -32,6 +32,8 @@ class PieceFactory:
                                    footprint=curr_footprint, routing=curr_routing,
                                    is_bridge=is_bridge)
             variants.append(variant)
+            
+            # Rotate for next iteration
             curr_footprint = {cls.rotate_coord(c) for c in curr_footprint}
             new_routing = {}
             for (start_coord, entry_dir), (path, exit_dir) in curr_routing.items():
@@ -45,14 +47,21 @@ class PieceFactory:
 
     @classmethod
     def create_orange_tube(cls) -> List[PieceVariant]:
-        # Base: (0,0) corner, (1,0) leg1, (0,1) leg2
+        # Base: (0,0), (1,0), (0,1).
+        # Rot180: Corner(0,0) at (3,4), Leg1(-1,0) at (2,4), Leg2(0,-1) at (3,3)
         footprint = {(0,0), (1,0), (0,1)}
         routing = {
-            # (0,0): connects UP and DOWN
-            ((0,0), Direction.LEFT): ([(0,0, Level.GROUND)], Direction.RIGHT),
-            # (1,0): connects UP and LEFT
-            ((1,0), Direction.LEFT): ([(1,0, Level.GROUND)], Direction.UP),
-            # (0,1): connects UP and RIGHT
+            # Base Corner (0,0): connects UP(Left) and LEFT(Up)
+            # In Rot180: UP->DOWN(Right), LEFT->RIGHT(Down)
+            # Expected O(3,4): connects UP(Left) and LEFT(Up).
+            # Wait, O(3,4) is Corner. Needs | above and - left.
+            # | above is UP(Left). - left is RIGHT(Down)? No, UP(Left) is Dash Left.
+            # Let's use the actual symbols.
+            # (0,0): needs LEFT(Up) and UP(Left).
+            # (1,0): needs LEFT(Up) and RIGHT(Down).
+            # (0,1): needs LEFT(Up) and DOWN(Right).
+            ((0,0), Direction.UP): ([(0,0, Level.GROUND)], Direction.LEFT),
+            ((1,0), Direction.LEFT): ([(1,0, Level.GROUND)], Direction.RIGHT),
             ((0,1), Direction.LEFT): ([(0,1, Level.GROUND)], Direction.DOWN)
         }
         return cls.generate_rotations("OrangeTube", footprint, routing)
@@ -61,8 +70,7 @@ class PieceFactory:
     def create_red_tube(cls) -> List[PieceVariant]:
         footprint = {(0,0), (1,0)}
         routing = {
-            ((0,0), Direction.LEFT): ([(0,0, Level.GROUND)], Direction.RIGHT),
-            ((1,0), Direction.LEFT): ([(1,0, Level.GROUND)], Direction.DOWN)
+            ((0,0), Direction.RIGHT): ([(0,0, Level.GROUND), (1,0, Level.GROUND)], Direction.DOWN)
         }
         return cls.generate_rotations("RedTube", footprint, routing)
 
@@ -70,11 +78,7 @@ class PieceFactory:
     def create_blue_bridge(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1), (0,2)}
         routing = {
-            ((0,0), Direction.DOWN): ([(0,0, Level.BRIDGE)], Direction.RIGHT),
-            ((0,0), Direction.RIGHT): ([(0,0, Level.GROUND)], Direction.RIGHT),
-            ((0,1), Direction.UP): ([(0,1, Level.BRIDGE)], Direction.DOWN),
-            ((0,2), Direction.UP): ([(0,2, Level.BRIDGE)], Direction.RIGHT),
-            ((0,2), Direction.RIGHT): ([(0,2, Level.GROUND)], Direction.RIGHT)
+            ((0,0), Direction.LEFT): ([(0,0, Level.BRIDGE), (0,1, Level.BRIDGE), (0,2, Level.BRIDGE)], Direction.RIGHT)
         }
         return cls.generate_rotations("BlueBridge", footprint, routing, is_bridge=True)
 
@@ -82,9 +86,7 @@ class PieceFactory:
     def create_light_blue_hurdle(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1), (0,2)}
         routing = {
-            ((0,0), Direction.UP): ([(0,0, Level.GROUND)], Direction.DOWN),
-            ((0,1), Direction.UP): ([(0,1, Level.GROUND)], Direction.DOWN),
-            ((0,2), Direction.UP): ([(0,2, Level.GROUND)], Direction.DOWN)
+            ((0,0), Direction.DOWN): ([(0,0, Level.GROUND), (0,1, Level.GROUND), (0,2, Level.GROUND)], Direction.DOWN)
         }
         return cls.generate_rotations("LightBlueHurdle", footprint, routing)
 
@@ -92,8 +94,7 @@ class PieceFactory:
     def create_purple_hurdle(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1)}
         routing = {
-            ((0,0), Direction.UP): ([(0,0, Level.GROUND)], Direction.DOWN),
-            ((0,1), Direction.UP): ([(0,1, Level.GROUND)], Direction.DOWN)
+            ((0,0), Direction.DOWN): ([(0,0, Level.GROUND), (0,1, Level.GROUND)], Direction.DOWN)
         }
         return cls.generate_rotations("PurpleHurdle", footprint, routing)
 
@@ -101,9 +102,7 @@ class PieceFactory:
     def create_yellow_seesaw(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1), (0,2)}
         routing = {
-            ((0,0), Direction.UP): ([(0,0, Level.GROUND)], Direction.DOWN),
-            ((0,1), Direction.UP): ([(0,1, Level.GROUND)], Direction.DOWN),
-            ((0,2), Direction.UP): ([(0,2, Level.GROUND)], Direction.RIGHT)
+            ((0,0), Direction.DOWN): ([(0,0, Level.GROUND), (0,1, Level.GROUND), (0,2, Level.GROUND)], Direction.RIGHT)
         }
         return cls.generate_rotations("YellowSeesaw", footprint, routing)
 
