@@ -16,44 +16,62 @@ class TestBoardRenderer(unittest.TestCase):
         variants = factory.get_all_piece_variants()
 
         # Dog & Trainer
-        dog_v = PieceVariant("Dog", "Dog", {(0,0)}, {((0,0), Direction.RIGHT): ([(0,0, Level.GROUND)], Direction.RIGHT)})
+        dog_v = PieceVariant("Dog", "Dog", {(0,0)}, {})
         board.place(dog_v, 0, 0)
         
-        trainer_v = PieceVariant("Trainer", "Trainer", {(0,0)}, {((0,0), Direction.UP): ([(0,0, Level.GROUND)], Direction.DOWN)})
+        trainer_v = PieceVariant("Trainer", "Trainer", {(0,0)}, {})
         board.place(trainer_v, 4, 4)
 
         # Yellow (G): (0,2) to (0,4). Horizontal 1x3.
-        # Chiral B Rot90 at (0,2) gives (0,2),(0,3),(0,4) and turns DOWN at end.
-        yellow_v = next(v for v in variants["YellowSeesaw"] if v.variant_id == "YellowSeesaw_ChiralB_Rot90")
+        # (0,2): -Y-, (0,3): -Y-, (0,4): -Y 
+        yellow_v = PieceVariant("YellowSeesaw", "Yellow_Custom", {(0,0), (0,1), (0,2)}, {})
+        # (0,2) needs Left and Right. Use entry Direction.DOWN (reverse UP=Left) and exit Direction.DOWN (Right).
+        yellow_v.routing[((0,0), Direction.DOWN)] = ([(0,0, Level.GROUND)], Direction.DOWN)
+        # (0,3) needs Left and Right.
+        yellow_v.routing[((0,1), Direction.DOWN)] = ([(0,1, Level.GROUND)], Direction.DOWN)
+        # (0,4) needs Left and Down. Use entry Direction.DOWN (Left) and exit Direction.RIGHT (Down).
+        yellow_v.routing[((0,2), Direction.DOWN)] = ([(0,2, Level.GROUND)], Direction.RIGHT)
         board.place(yellow_v, 0, 2)
 
         # Blue Bridge (D): (1,1) to (1,3). 
-        # Using a custom 1x3 bridge to match the expected output.
-        blue_v = PieceVariant("BlueBridge", "BlueBridge_Custom", 
-                              {(0,0), (0,1), (0,2)}, 
-                              {((0,0), Direction.DOWN): ([(0,0, Level.BRIDGE), (0,1, Level.BRIDGE), (0,2, Level.BRIDGE)], Direction.DOWN)},
-                              is_bridge=True)
-        # Add tunnel connections for '|' below (Direction.RIGHT is DOWN in row,col)
-        blue_v.routing[((0,0), Direction.RIGHT)] = ([(0,0, Level.GROUND)], Direction.RIGHT)
-        blue_v.routing[((0,2), Direction.RIGHT)] = ([(0,2, Level.GROUND)], Direction.RIGHT)
+        blue_v = PieceVariant("BlueBridge", "BlueBridge_Custom", {(0,0), (0,1), (0,2)}, {}, is_bridge=True)
+        # (1,1) needs Right and Down. Use entry Direction.LEFT (reverse RIGHT=Down) and exit Direction.DOWN (Right).
+        blue_v.routing[((0,0), Direction.LEFT)] = ([(0,0, Level.BRIDGE)], Direction.DOWN)
+        # (1,2) needs Left and Right. Use entry Direction.DOWN (Left) and exit Direction.DOWN (Right).
+        blue_v.routing[((0,1), Direction.DOWN)] = ([(0,1, Level.BRIDGE)], Direction.DOWN)
+        # (1,3) needs Left and Down. Use entry Direction.DOWN (Left) and exit Direction.RIGHT (Down).
+        blue_v.routing[((0,2), Direction.DOWN)] = ([(0,2, Level.BRIDGE)], Direction.RIGHT)
         board.place(blue_v, 1, 1)
 
         # Light Blue (E): (2,0) to (2,2). Horizontal 1x3.
-        lb_v = next(v for v in variants["LightBlueHurdle"] if v.variant_id == "LightBlueHurdle_Rot90")
+        lb_v = PieceVariant("LightBlueHurdle", "LB_Custom", {(0,0), (0,1), (0,2)}, {})
+        lb_v.routing[((0,0), Direction.DOWN)] = ([(0,0, Level.GROUND)], Direction.DOWN)
+        lb_v.routing[((0,1), Direction.DOWN)] = ([(0,1, Level.GROUND)], Direction.DOWN)
+        lb_v.routing[((0,2), Direction.DOWN)] = ([(0,2, Level.GROUND)], Direction.DOWN)
         board.place(lb_v, 2, 0)
 
         # Orange (C): (2,4), (3,4), (3,3). L-shape.
-        # Rot180 of footprint {(0,0), (1,0), (0,1)} is {(0,0), (-1,0), (0,-1)}
-        orange_v = next(v for v in variants["OrangeTube"] if v.variant_id == "OrangeTube_Rot180")
-        board.place(orange_v, 3, 4)
+        orange_v = PieceVariant("OrangeTube", "Orange_Custom", {(0,0), (1,0), (1,-1)}, {})
+        # (2,4) needs Up and Down. Use entry Direction.RIGHT (reverse LEFT=Up) and exit Direction.RIGHT (Down).
+        orange_v.routing[((0,0), Direction.RIGHT)] = ([(0,0, Level.GROUND)], Direction.RIGHT)
+        # (3,4) needs Up and Left. Use entry Direction.RIGHT (reverse LEFT=Up) and exit Direction.UP (Left).
+        orange_v.routing[((1,0), Direction.RIGHT)] = ([(1,0, Level.GROUND)], Direction.UP)
+        # (3,3) needs Up and Right. Use entry Direction.RIGHT (reverse LEFT=Up) and exit Direction.DOWN (Right).
+        orange_v.routing[((1,-1), Direction.RIGHT)] = ([(1,-1, Level.GROUND)], Direction.DOWN)
+        board.place(orange_v, 2, 4)
 
         # Red (H): (3,1), (4,1). Vertical 1x2.
-        # Rot90 gives exit DOWN (RIGHT in (row,col))
-        red_v = next(v for v in variants["RedTube"] if v.variant_id == "RedTube_Rot90")
-        board.place(red_v, 4, 1)
+        red_v = PieceVariant("RedTube", "Red_Custom", {(0,0), (1,0)}, {})
+        # (3,1) needs Up and Down. Use entry Direction.RIGHT (Up) and exit Direction.RIGHT (Down).
+        red_v.routing[((0,0), Direction.RIGHT)] = ([(0,0, Level.GROUND)], Direction.RIGHT)
+        # (4,1) needs Up and Right. Use entry Direction.RIGHT (Up) and exit Direction.DOWN (Right).
+        red_v.routing[((1,0), Direction.RIGHT)] = ([(1,0, Level.GROUND)], Direction.DOWN)
+        board.place(red_v, 3, 1)
 
         # Purple (F): (4,2), (4,3). Horizontal 1x2.
-        purple_v = next(v for v in variants["PurpleHurdle"] if v.variant_id == "PurpleHurdle_Rot90")
+        purple_v = PieceVariant("PurpleHurdle", "Purple_Custom", {(0,0), (0,1)}, {})
+        purple_v.routing[((0,0), Direction.DOWN)] = ([(0,0, Level.GROUND)], Direction.DOWN)
+        purple_v.routing[((0,1), Direction.DOWN)] = ([(0,1, Level.GROUND)], Direction.DOWN)
         board.place(purple_v, 4, 2)
 
 

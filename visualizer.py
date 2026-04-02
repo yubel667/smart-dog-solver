@@ -42,30 +42,14 @@ class BoardVisualizer:
                 if symbol not in ["D", "T"]:
                     connections = variant.routing_info_at(dx, dy)
                     for d in connections:
-                        # Determine neighbor coordinates
-                        nrow, ncol = row, col
-                        if d == Direction.UP: ncol -= 1
-                        elif d == Direction.DOWN: ncol += 1
-                        elif d == Direction.LEFT: nrow -= 1
-                        elif d == Direction.RIGHT: nrow += 1
-                        
-                        # Show connection if:
-                        # 1. Neighbor is a piece
-                        # 2. It's a Yellow Seesaw (entry/exit arrows)
-                        # 3. It's a Blue Bridge tunnel leg (connects DOWN only)
-                        is_piece_neighbor = board.get_occupant(nrow, ncol, Level.GROUND) or board.get_occupant(nrow, ncol, Level.BRIDGE)
-                        is_seesaw = (symbol == "Y")
-                        is_bridge_tunnel = (symbol == "B" and d == Direction.RIGHT)
-                        
-                        if is_piece_neighbor or is_seesaw or is_bridge_tunnel:
-                            if d == Direction.UP: # dy=-1 -> Left
-                                canvas[cy][cx - 1] = "-"
-                            elif d == Direction.DOWN: # dy=1 -> Right
-                                canvas[cy][cx + 1] = "-"
-                            elif d == Direction.LEFT: # dx=-1 -> Up
-                                canvas[cy - 1][cx] = "|"
-                            elif d == Direction.RIGHT: # dx=1 -> Down
-                                canvas[cy + 1][cx] = "|"
+                        if d == Direction.UP: # dy=-1 -> Left
+                            canvas[cy][cx - 1] = "-"
+                        elif d == Direction.DOWN: # dy=1 -> Right
+                            canvas[cy][cx + 1] = "-"
+                        elif d == Direction.LEFT: # dx=-1 -> Up
+                            canvas[cy - 1][cx] = "|"
+                        elif d == Direction.RIGHT: # dx=1 -> Down
+                            canvas[cy + 1][cx] = "|"
 
         # 2. Assemble Output
         output = []
