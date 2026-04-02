@@ -99,9 +99,9 @@ class PieceFactory:
     def create_light_blue_hurdle(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1), (0,2)}
         connections = {
-            (0,0): {Direction.LEFT, Direction.RIGHT},
-            (0,1): {Direction.LEFT, Direction.RIGHT},
-            (0,2): {Direction.LEFT, Direction.RIGHT}
+            (0,0): {Direction.UP, Direction.DOWN},
+            (0,1): {Direction.UP, Direction.DOWN},
+            (0,2): {Direction.UP, Direction.DOWN}
         }
         return cls.generate_rotations("LightBlueHurdle", footprint, cls.build_routing(connections))
 
@@ -109,8 +109,8 @@ class PieceFactory:
     def create_purple_hurdle(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1)}
         connections = {
-            (0,0): {Direction.LEFT, Direction.RIGHT},
-            (0,1): {Direction.LEFT, Direction.RIGHT}
+            (0,0): {Direction.UP, Direction.DOWN},
+            (0,1): {Direction.UP, Direction.DOWN}
         }
         return cls.generate_rotations("PurpleHurdle", footprint, cls.build_routing(connections))
 
@@ -118,9 +118,9 @@ class PieceFactory:
     def create_yellow_seesaw(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1), (0,2)}
         connections = {
-            (0,0): {Direction.LEFT, Direction.RIGHT},
-            (0,1): {Direction.LEFT, Direction.RIGHT},
-            (0,2): {Direction.LEFT, Direction.DOWN}
+            (0,0): {Direction.UP, Direction.DOWN},
+            (0,1): {Direction.UP, Direction.DOWN},
+            (0,2): {Direction.UP, Direction.RIGHT}
         }
         return cls.generate_rotations("YellowSeesaw", footprint, cls.build_routing(connections))
 

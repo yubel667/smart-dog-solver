@@ -32,6 +32,8 @@ class TestSolver(unittest.TestCase):
         solver = Solver()
         result_board = solver.solve(board, remaining_pieces)
 
+        print(BoardVisualizer.render(result_board, with_indices=False))
+
         self.assertIsNotNone(result_board, "Solver should find a solution.")
 
         # Check if all pieces are placed
