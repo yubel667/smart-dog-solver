@@ -48,15 +48,52 @@ class PieceFactory:
         curr_tunnel = base_tunnel or set()
 
         for i in range(4):
+            # Calculate connectivity for each square in the footprint
+            connections = {coord: set() for coord in curr_footprint}
+            for (start_coord, entry_dir), (path, exit_dir) in curr_routing.items():
+                # Entry connection (path[0] is entered FROM entry_dir.reverse())
+                connections[start_coord].add(entry_dir.reverse())
+                
+                # Internal connections
+                for j in range(len(path)):
+                    curr_p = (path[j][0], path[j][1])
+                    if j > 0:
+                        prev_p = (path[j-1][0], path[j-1][1])
+                        dx, dy = curr_p[0] - prev_p[0], curr_p[1] - prev_p[1]
+                        if (dx, dy) == (0, 1):
+                            connections[prev_p].add(Direction.DOWN)
+                            connections[curr_p].add(Direction.UP)
+                        elif (dx, dy) == (0, -1):
+                            connections[prev_p].add(Direction.UP)
+                            connections[curr_p].add(Direction.DOWN)
+                        elif (dx, dy) == (1, 0):
+                            connections[prev_p].add(Direction.RIGHT)
+                            connections[curr_p].add(Direction.LEFT)
+                        elif (dx, dy) == (-1, 0):
+                            connections[prev_p].add(Direction.LEFT)
+                            connections[curr_p].add(Direction.RIGHT)
+                
+                # Exit connection (last square of path is exited TO exit_dir)
+                last_p = (path[-1][0], path[-1][1])
+                connections[last_p].add(exit_dir)
+            
+            # Map connections to box drawing characters
+            # Single lines for ground, double lines for bridge
+            char_map = {}
+            for coord, dirs in connections.items():
+                char_map[coord] = cls.get_box_char(dirs, is_bridge)
+
             v_id = f"{piece_id}{prefix}_Rot{i*90}"
-            variants.append(PieceVariant(
+            variant = PieceVariant(
                 piece_id=piece_id,
                 variant_id=v_id,
                 footprint=curr_footprint,
                 routing=curr_routing,
                 tunnel_compatible=curr_tunnel,
                 is_bridge=is_bridge
-            ))
+            )
+            variant.char_map = char_map # Inject character map
+            variants.append(variant)
             
             # Rotate for next iteration
             curr_footprint = {cls.rotate_coord(c) for c in curr_footprint}
@@ -66,12 +103,56 @@ class PieceFactory:
             for (start_coord, entry_dir), (path, exit_dir) in curr_routing.items():
                 new_start = cls.rotate_coord(start_coord)
                 new_entry = cls.rotate_dir(entry_dir)
-                new_path = [(cls.rotate_coord((p[0], p[1])), p[2]) for p in path]
+                new_path = []
+                for p_dx, p_dy, p_level in path:
+                    rdx, rdy = cls.rotate_coord((p_dx, p_dy))
+                    new_path.append((rdx, rdy, p_level))
                 new_exit = cls.rotate_dir(exit_dir)
                 new_routing[(new_start, new_entry)] = (new_path, new_exit)
             curr_routing = new_routing
 
         return variants
+
+    @staticmethod
+    def get_box_char(dirs: Set[Direction], is_bridge: bool) -> str:
+        """Returns the appropriate box-drawing character for a set of connections."""
+        # Ground (single) and bridge (double) characters
+        ground_chars = {
+            frozenset([Direction.UP, Direction.DOWN]): "┃",
+            frozenset([Direction.LEFT, Direction.RIGHT]): "━",
+            frozenset([Direction.UP, Direction.RIGHT]): "┗",
+            frozenset([Direction.UP, Direction.LEFT]): "┛",
+            frozenset([Direction.DOWN, Direction.RIGHT]): "┏",
+            frozenset([Direction.DOWN, Direction.LEFT]): "┓",
+            frozenset([Direction.UP, Direction.DOWN, Direction.LEFT]): "┫",
+            frozenset([Direction.UP, Direction.DOWN, Direction.RIGHT]): "┣",
+            frozenset([Direction.UP, Direction.LEFT, Direction.RIGHT]): "┻",
+            frozenset([Direction.DOWN, Direction.LEFT, Direction.RIGHT]): "┳",
+            frozenset([Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]): "╋",
+            frozenset([Direction.UP]): "╹",
+            frozenset([Direction.DOWN]): "╻",
+            frozenset([Direction.LEFT]): "╸",
+            frozenset([Direction.RIGHT]): "╺",
+        }
+        bridge_chars = {
+            frozenset([Direction.UP, Direction.DOWN]): "║",
+            frozenset([Direction.LEFT, Direction.RIGHT]): "═",
+            frozenset([Direction.UP, Direction.RIGHT]): "╚",
+            frozenset([Direction.UP, Direction.LEFT]): "╝",
+            frozenset([Direction.DOWN, Direction.RIGHT]): "╔",
+            frozenset([Direction.DOWN, Direction.LEFT]): "╗",
+            frozenset([Direction.UP, Direction.DOWN, Direction.LEFT]): "╣",
+            frozenset([Direction.UP, Direction.DOWN, Direction.RIGHT]): "╠",
+            frozenset([Direction.UP, Direction.LEFT, Direction.RIGHT]): "╩",
+            frozenset([Direction.DOWN, Direction.LEFT, Direction.RIGHT]): "╦",
+            frozenset([Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]): "╬",
+            frozenset([Direction.UP]): "╨",
+            frozenset([Direction.DOWN]): "╥",
+            frozenset([Direction.LEFT]): "╡",
+            frozenset([Direction.RIGHT]): "╞",
+        }
+        chars = bridge_chars if is_bridge else ground_chars
+        return chars.get(frozenset(dirs), "?")
 
     @classmethod
     def create_orange_tube(cls) -> List[PieceVariant]:
@@ -86,12 +167,13 @@ class PieceFactory:
 
     @classmethod
     def create_red_tube(cls) -> List[PieceVariant]:
-        # Identical to Orange Tube geometry
-        footprint = {(0,0), (1,0), (0,1)}
-        tunnel = {(1,0), (0,1)}
+        # Red Tube (H) is a 1x2 curved piece (2 squares)
+        # (0,0) corner/leg, (1,0) leg
+        footprint = {(0,0), (1,0)}
+        tunnel = {(0,0), (1,0)}
         routing = {
-            ((1,0), Direction.LEFT): ([(1,0, Level.GROUND), (0,0, Level.GROUND), (0,1, Level.GROUND)], Direction.DOWN),
-            ((0,1), Direction.UP): ([(0,1, Level.GROUND), (0,0, Level.GROUND), (1,0, Level.GROUND)], Direction.RIGHT)
+            ((0,0), Direction.UP): ([(0,0, Level.GROUND), (1,0, Level.GROUND)], Direction.RIGHT),
+            ((1,0), Direction.LEFT): ([(1,0, Level.GROUND), (0,0, Level.GROUND)], Direction.DOWN)
         }
         return cls.generate_rotations("RedTube", footprint, routing, tunnel)
 

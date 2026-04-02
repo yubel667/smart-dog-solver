@@ -46,6 +46,36 @@ class PieceVariant:
         self.routing = routing
         self.tunnel_compatible = tunnel_compatible or set()
         self.is_bridge = is_bridge
+        self.char_map = {} # To be injected by factory
+
+    def routing_info_at(self, dx: int, dy: int) -> Set[Direction]:
+        """Returns the directions the path connects to at relative square (dx, dy)."""
+        connections = set()
+        for (start_coord, entry_dir), (path, exit_dir) in self.routing.items():
+            # Check if this square is on the path
+            for i in range(len(path)):
+                p_dx, p_dy, _ = path[i]
+                if (p_dx, p_dy) == (dx, dy):
+                    # Connection from entry
+                    if i == 0:
+                        connections.add(entry_dir.reverse())
+                    else:
+                        prev_dx, prev_dy, _ = path[i-1]
+                        if prev_dy < dy: connections.add(Direction.UP)
+                        elif prev_dy > dy: connections.add(Direction.DOWN)
+                        elif prev_dx < dx: connections.add(Direction.LEFT)
+                        elif prev_dx > dx: connections.add(Direction.RIGHT)
+                    
+                    # Connection to next
+                    if i == len(path) - 1:
+                        connections.add(exit_dir)
+                    else:
+                        next_dx, next_dy, _ = path[i+1]
+                        if next_dy < dy: connections.add(Direction.UP)
+                        elif next_dy > dy: connections.add(Direction.DOWN)
+                        elif next_dx < dx: connections.add(Direction.LEFT)
+                        elif next_dx > dx: connections.add(Direction.RIGHT)
+        return connections
 
 class Board:
     """
