@@ -4,7 +4,8 @@ from models import PieceVariant, Direction, Level
 class PieceFactory:
     @staticmethod
     def rotate_coord(coord: Tuple[int, int]) -> Tuple[int, int]:
-        """Rotates a coordinate (dx, dy) 90 degrees clockwise."""
+        """Rotates a coordinate (x, y) 90 degrees clockwise."""
+        # (x, y) -> (-y, x)
         return (-coord[1], coord[0])
 
     @staticmethod
@@ -68,59 +69,59 @@ class PieceFactory:
 
     @classmethod
     def create_orange_tube(cls) -> List[PieceVariant]:
-        footprint = {(0,0), (1,0), (1,-1)}
+        footprint = {(0,0), (0,1), (-1,1)}
         connections = {
-            (0,0): {Direction.LEFT, Direction.RIGHT},
-            (1,0): {Direction.UP, Direction.LEFT},
-            (1,-1): {Direction.DOWN, Direction.LEFT}
+            (0,0): {Direction.UP, Direction.DOWN},
+            (0,1): {Direction.LEFT, Direction.UP},
+            (-1,1): {Direction.RIGHT, Direction.UP}
         }
         return cls.generate_rotations("OrangeTube", footprint, cls.build_routing(connections))
 
     @classmethod
     def create_red_tube(cls) -> List[PieceVariant]:
-        footprint = {(0,0), (1,0)}
+        footprint = {(0,0), (0,1)}
         connections = {
-            (0,0): {Direction.LEFT, Direction.RIGHT},
-            (1,0): {Direction.DOWN, Direction.LEFT}
+            (0,0): {Direction.UP, Direction.DOWN},
+            (0,1): {Direction.RIGHT, Direction.UP}
         }
         return cls.generate_rotations("RedTube", footprint, cls.build_routing(connections))
 
     @classmethod
     def create_blue_bridge(cls) -> List[PieceVariant]:
-        footprint = {(0,0), (0,1), (0,2)}
+        footprint = {(0,0), (1,0), (2,0)}
         connections = {
-            (0,0): {Direction.DOWN, Direction.RIGHT},
-            (0,1): {Direction.UP, Direction.DOWN},
-            (0,2): {Direction.UP, Direction.RIGHT}
+            (0,0): {Direction.RIGHT, Direction.DOWN},
+            (1,0): {Direction.LEFT, Direction.RIGHT},
+            (2,0): {Direction.LEFT, Direction.DOWN}
         }
         return cls.generate_rotations("BlueBridge", footprint, cls.build_routing(connections, is_bridge=True), is_bridge=True)
 
     @classmethod
     def create_light_blue_hurdle(cls) -> List[PieceVariant]:
-        footprint = {(0,0), (0,1), (0,2)}
+        footprint = {(0,0), (1,0), (2,0)}
         connections = {
-            (0,0): {Direction.UP, Direction.DOWN},
-            (0,1): {Direction.UP, Direction.DOWN},
-            (0,2): {Direction.UP, Direction.DOWN}
+            (0,0): {Direction.LEFT, Direction.RIGHT},
+            (1,0): {Direction.LEFT, Direction.RIGHT},
+            (2,0): {Direction.LEFT, Direction.RIGHT}
         }
         return cls.generate_rotations("LightBlueHurdle", footprint, cls.build_routing(connections))
 
     @classmethod
     def create_purple_hurdle(cls) -> List[PieceVariant]:
-        footprint = {(0,0), (0,1)}
+        footprint = {(0,0), (1,0)}
         connections = {
-            (0,0): {Direction.UP, Direction.DOWN},
-            (0,1): {Direction.UP, Direction.DOWN}
+            (0,0): {Direction.LEFT, Direction.RIGHT},
+            (1,0): {Direction.LEFT, Direction.RIGHT}
         }
         return cls.generate_rotations("PurpleHurdle", footprint, cls.build_routing(connections))
 
     @classmethod
     def create_yellow_seesaw(cls) -> List[PieceVariant]:
-        footprint = {(0,0), (0,1), (0,2)}
+        footprint = {(0,0), (1,0), (2,0)}
         connections = {
-            (0,0): {Direction.UP, Direction.DOWN},
-            (0,1): {Direction.UP, Direction.DOWN},
-            (0,2): {Direction.UP, Direction.RIGHT}
+            (0,0): {Direction.LEFT, Direction.RIGHT},
+            (1,0): {Direction.LEFT, Direction.RIGHT},
+            (2,0): {Direction.LEFT, Direction.DOWN}
         }
         return cls.generate_rotations("YellowSeesaw", footprint, cls.build_routing(connections))
 

@@ -18,12 +18,12 @@ class TestSolver(unittest.TestCase):
 
         board.place(get_v("Dog", ""), 0, 0)
         board.place(get_v("Trainer", ""), 4, 4)
-        board.place(get_v("YellowSeesaw", "_Rot0"), 0, 2)
+        board.place(get_v("YellowSeesaw", "_Rot0"), 2, 0)
         board.place(get_v("BlueBridge", "_Rot0"), 1, 1)
-        board.place(get_v("LightBlueHurdle", "_Rot0"), 2, 0)
-        board.place(get_v("OrangeTube", "_Rot0"), 2, 4)
-        board.place(get_v("RedTube", "_Rot0"), 3, 1)
-        board.place(get_v("PurpleHurdle", "_Rot0"), 4, 2)
+        board.place(get_v("LightBlueHurdle", "_Rot0"), 0, 2)
+        board.place(get_v("OrangeTube", "_Rot0"), 4, 2)
+        board.place(get_v("RedTube", "_Rot0"), 1, 3)
+        board.place(get_v("PurpleHurdle", "_Rot0"), 2, 4)
 
         solver = Solver()
         # remaining_pieces is empty because all are placed

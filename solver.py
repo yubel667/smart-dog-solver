@@ -8,32 +8,32 @@ class Solver:
         
         self.piece_ports_base = {
             "OrangeTube": {
-                (0,0): {Direction.LEFT, Direction.RIGHT},
-                (1,0): {Direction.LEFT, Direction.UP},
-                (1,-1): {Direction.DOWN, Direction.LEFT}
+                (0,0): {Direction.UP, Direction.DOWN},
+                (0,1): {Direction.UP, Direction.LEFT},
+                (-1,1): {Direction.RIGHT, Direction.UP}
             },
             "RedTube": {
-                (0,0): {Direction.LEFT, Direction.RIGHT},
-                (1,0): {Direction.LEFT, Direction.DOWN}
+                (0,0): {Direction.UP, Direction.DOWN},
+                (0,1): {Direction.UP, Direction.RIGHT}
             },
             "BlueBridge": {
-                (0,0): {Direction.DOWN, Direction.RIGHT},
-                (0,1): {Direction.UP, Direction.DOWN},
-                (0,2): {Direction.UP, Direction.RIGHT}
+                (0,0): {Direction.RIGHT, Direction.DOWN},
+                (1,0): {Direction.LEFT, Direction.RIGHT},
+                (2,0): {Direction.LEFT, Direction.DOWN}
             },
             "LightBlueHurdle": {
                 (0,0): set(),
-                (0,1): {Direction.LEFT, Direction.RIGHT},
-                (0,2): set()
+                (1,0): {Direction.UP, Direction.DOWN},
+                (2,0): set()
             },
             "PurpleHurdle": {
-                (0,0): {Direction.UP, Direction.DOWN},
-                (0,1): {Direction.UP, Direction.DOWN}
+                (0,0): {Direction.LEFT, Direction.RIGHT},
+                (1,0): {Direction.LEFT, Direction.RIGHT}
             },
             "YellowSeesaw": {
-                (0,0): {Direction.UP, Direction.DOWN},
-                (0,1): {Direction.UP, Direction.DOWN},
-                (0,2): {Direction.UP, Direction.RIGHT}
+                (0,0): {Direction.LEFT, Direction.RIGHT},
+                (1,0): {Direction.LEFT, Direction.RIGHT},
+                (2,0): {Direction.LEFT, Direction.DOWN}
             },
             "Dog": {(0,0): set()},
             "Trainer": {(0,0): set()}
@@ -62,7 +62,7 @@ class Solver:
 
                 if p_id == "YellowSeesaw":
                     c = (0,0)
-                    d = Direction.UP
+                    d = Direction.LEFT
                     for _ in range(rot_count):
                         c = self.factory.rotate_coord(c)
                         d = self.factory.rotate_dir(d)

@@ -31,15 +31,15 @@ class BoardVisualizer:
         canvas = [[" " for _ in range(canvas_size)] for _ in range(canvas_size)]
 
         # Map Direction to sub-grid offset and character
-        # UP    (0, -1) -> Row delta 0, Col delta -1 -> Left
-        # DOWN  (0, 1)  -> Row delta 0, Col delta 1  -> Right
-        # LEFT  (-1, 0) -> Row delta -1, Col delta 0 -> Top
-        # RIGHT (1, 0)  -> Row delta 1, Col delta 0  -> Bottom
+        # UP    (0, -1) -> Row delta -1, Col delta 0
+        # DOWN  (0, 1)  -> Row delta 1, Col delta 0
+        # LEFT  (-1, 0) -> Row delta 0, Col delta -1
+        # RIGHT (1, 0)  -> Row delta 0, Col delta 1
         DIR_MAP = {
-            Direction.UP:    (0, -1, "-"),
-            Direction.DOWN:  (0, 1,  "-"),
-            Direction.LEFT:  (-1, 0, "|"),
-            Direction.RIGHT: (1, 0,  "|")
+            Direction.UP:    (-1, 0, "|"),
+            Direction.DOWN:  (1, 0,  "|"),
+            Direction.LEFT:  (0, -1, "-"),
+            Direction.RIGHT: (0, 1,  "-")
         }
 
         # 1. Fill Canvas
@@ -47,8 +47,8 @@ class BoardVisualizer:
             symbol = cls.SYMBOLS.get(piece_id, "?")
             
             for (dx, dy) in variant.footprint:
-                # Transpose: rx is row, ry is col
-                row, col = rx + dx, ry + dy
+                # No transpose: rx is col, ry is row
+                col, row = rx + dx, ry + dy
                 # Sub-grid center: cy is row-major y, cx is col-major x
                 cx, cy = col * cell_size + 1, row * cell_size + 1
                 
