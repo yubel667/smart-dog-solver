@@ -14,7 +14,8 @@ class Solver:
             },
             "RedTube": {
                 (0,0): {Direction.UP, Direction.DOWN},
-                (0,1): {Direction.UP, Direction.RIGHT}
+                (0,1): {Direction.UP, Direction.RIGHT},
+                (1,1): {Direction.UP, Direction.LEFT}
             },
             "BlueBridge": {
                 (0,0): {Direction.RIGHT, Direction.DOWN},

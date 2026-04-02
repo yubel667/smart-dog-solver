@@ -36,11 +36,15 @@ class PieceFactory:
                            base_footprint: Set[Tuple[int, int]], 
                            base_routing: Dict,
                            is_bridge: bool = False,
+                           tunnel_compatible: Set[Tuple[int, int]] = None,
+                           bridge_legs: Set[Tuple[int, int]] = None,
                            prefix: str = "") -> List[PieceVariant]:
         """Generates 4 rotated variants from a base configuration."""
         variants = []
         curr_footprint = base_footprint
         curr_routing = base_routing
+        curr_tunnel = tunnel_compatible or set()
+        curr_legs = bridge_legs or set()
 
         for i in range(4):
             v_id = f"{piece_id}{prefix}_Rot{i*90}"
@@ -49,12 +53,16 @@ class PieceFactory:
                 variant_id=v_id,
                 footprint=curr_footprint,
                 routing=curr_routing,
-                is_bridge=is_bridge
+                is_bridge=is_bridge,
+                tunnel_compatible=curr_tunnel,
+                bridge_legs=curr_legs
             )
             variants.append(variant)
             
             # Rotate for next iteration
             curr_footprint = {cls.rotate_coord(c) for c in curr_footprint}
+            curr_tunnel = {cls.rotate_coord(c) for c in curr_tunnel}
+            curr_legs = {cls.rotate_coord(c) for c in curr_legs}
             
             new_routing = {}
             for (start_coord, entry_dir), (path, exit_dir) in curr_routing.items():
@@ -70,41 +78,45 @@ class PieceFactory:
     @classmethod
     def create_orange_tube(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1), (-1,1)}
+        tunnel_compatible = {(0,0)}
         connections = {
             (0,0): {Direction.UP, Direction.DOWN},
             (0,1): {Direction.LEFT, Direction.UP},
             (-1,1): {Direction.RIGHT, Direction.UP}
         }
-        return cls.generate_rotations("OrangeTube", footprint, cls.build_routing(connections))
+        return cls.generate_rotations("OrangeTube", footprint, cls.build_routing(connections), tunnel_compatible=tunnel_compatible)
 
     @classmethod
     def create_red_tube(cls) -> List[PieceVariant]:
         footprint = {(0,0), (0,1)}
+        tunnel_compatible = {(0,0)}
         connections = {
             (0,0): {Direction.UP, Direction.DOWN},
             (0,1): {Direction.RIGHT, Direction.UP}
         }
-        return cls.generate_rotations("RedTube", footprint, cls.build_routing(connections))
+        return cls.generate_rotations("RedTube", footprint, cls.build_routing(connections), tunnel_compatible=tunnel_compatible)
 
     @classmethod
     def create_blue_bridge(cls) -> List[PieceVariant]:
         footprint = {(0,0), (1,0), (2,0)}
+        bridge_legs = {(1,0)}
         connections = {
             (0,0): {Direction.RIGHT, Direction.DOWN},
             (1,0): {Direction.LEFT, Direction.RIGHT},
             (2,0): {Direction.LEFT, Direction.DOWN}
         }
-        return cls.generate_rotations("BlueBridge", footprint, cls.build_routing(connections, is_bridge=True), is_bridge=True)
+        return cls.generate_rotations("BlueBridge", footprint, cls.build_routing(connections, is_bridge=True), is_bridge=True, bridge_legs=bridge_legs)
 
     @classmethod
     def create_light_blue_hurdle(cls) -> List[PieceVariant]:
         footprint = {(0,0), (1,0), (2,0)}
+        tunnel_compatible = {(0,0), (2,0)}
         connections = {
             (0,0): {Direction.LEFT, Direction.RIGHT},
             (1,0): {Direction.LEFT, Direction.RIGHT},
             (2,0): {Direction.LEFT, Direction.RIGHT}
         }
-        return cls.generate_rotations("LightBlueHurdle", footprint, cls.build_routing(connections))
+        return cls.generate_rotations("LightBlueHurdle", footprint, cls.build_routing(connections), tunnel_compatible=tunnel_compatible)
 
     @classmethod
     def create_purple_hurdle(cls) -> List[PieceVariant]:

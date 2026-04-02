@@ -48,10 +48,30 @@ class PuzzleParser:
                 center_line_idx = r * 4 + 2
                 center_char_idx = c * 4 + 2
                 
-                symbol = lines[center_line_idx][center_char_idx]
-                if symbol != " ":
-                    grid_data[r][c]["symbol"] = symbol
-                
+                # Scan 3x3 cell for symbols
+                for dr in [-1, 0, 1]:
+                    for dc in [-1, 0, 1]:
+                        char = lines[center_line_idx + dr][center_char_idx + dc]
+                        if char in cls.SYMBOL_TO_ID:
+                            # If we already found a symbol, we might have multiple pieces
+                            # For now, let's store all found symbols in a list if needed
+                            # But most logic expects one symbol per piece cell.
+                            # In shared cells, we might have 'B' and 'O'.
+                            # Let's use the center symbol if available, otherwise any found symbol.
+                            if dr == 0 and dc == 0:
+                                grid_data[r][c]["symbol"] = char
+                            elif grid_data[r][c]["symbol"] == " ":
+                                grid_data[r][c]["symbol"] = char
+                            
+                            # Handle shared cell: if we find both B and something else
+                            # we should probably store both.
+                            if "symbols" not in grid_data[r][c]:
+                                grid_data[r][c]["symbols"] = set()
+                            grid_data[r][c]["symbols"].add(char)
+
+                if grid_data[r][c]["symbol"] == " " and "symbols" in grid_data[r][c]:
+                    grid_data[r][c]["symbol"] = list(grid_data[r][c]["symbols"])[0]
+
                 # Check connections
                 # UP: char above center
                 if lines[center_line_idx - 1][center_char_idx] in ["|", "B"]:
@@ -60,10 +80,10 @@ class PuzzleParser:
                 if lines[center_line_idx + 1][center_char_idx] in ["|", "B"]:
                     grid_data[r][c]["connections"].add(Direction.DOWN)
                 # LEFT: char left of center
-                if lines[center_line_idx][center_char_idx - 1] in ["-", "B"]:
+                if lines[center_line_idx][center_char_idx - 1] in ["-", "=", "B"]:
                     grid_data[r][c]["connections"].add(Direction.LEFT)
                 # RIGHT: char right of center
-                if lines[center_line_idx][center_char_idx + 1] in ["-", "B"]:
+                if lines[center_line_idx][center_char_idx + 1] in ["-", "=", "B"]:
                     grid_data[r][c]["connections"].add(Direction.RIGHT)
 
         # Step 2: Identify pieces and their root positions
@@ -147,10 +167,7 @@ class PuzzleParser:
             for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                 nr, nc = curr_r + dr, curr_c + dc
                 if 0 <= nr < 5 and 0 <= nc < 5 and (nr, nc) not in visited:
-                    if grid_data[nr][nc]["symbol"] == symbol:
-                        # Also check if they are actually connected in the visual
-                        # (This might be tricky for pieces like Hurdle which are straight)
-                        # Actually, for this game, same-symbol adjacent cells ARE the same piece.
+                    if symbol in grid_data[nr][nc].get("symbols", set()):
                         visited.add((nr, nc))
                         stack.append((nr, nc))
         return cells
@@ -159,6 +176,7 @@ class PuzzleParser:
     def _matches_connections(cls, variant, instance_conns) -> bool:
         # For each square in the instance, its connections must match the variant's routing_info_at
         for (dx, dy), conns in instance_conns.items():
-            if variant.routing_info_at(dx, dy) != conns:
+            required_conns = variant.routing_info_at(dx, dy)
+            if not required_conns.issubset(conns):
                 return False
         return True

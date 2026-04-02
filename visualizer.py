@@ -43,23 +43,56 @@ class BoardVisualizer:
         }
 
         # 1. Fill Canvas
+        # Each cell (row, col) can have multiple pieces. 
+        # We'll use a slightly more complex storage to handle multiple symbols.
+        # cell_symbols[row][col] is a list of piece_ids
+        cell_pieces = [[[] for _ in range(board.size)] for _ in range(board.size)]
         for piece_id, (variant, rx, ry) in board.placed_pieces.items():
-            symbol = cls.SYMBOLS.get(piece_id, "?")
-            
             for (dx, dy) in variant.footprint:
-                # No transpose: rx is col, ry is row
                 col, row = rx + dx, ry + dy
-                # Sub-grid center: cy is row-major y, cx is col-major x
+                cell_pieces[row][col].append((piece_id, variant, dx, dy))
+
+        for row in range(board.size):
+            for col in range(board.size):
                 cx, cy = col * cell_size + 1, row * cell_size + 1
+                pieces = cell_pieces[row][col]
+                if not pieces:
+                    continue
                 
-                canvas[cy][cx] = symbol
+                # Sort pieces so Bridge is first (at center)
+                pieces.sort(key=lambda x: 0 if x[1].is_bridge else 1)
                 
-                # Render connections for non-endpoint pieces
-                if symbol not in ["D", "T"]:
-                    connections = variant.routing_info_at(dx, dy)
-                    for d in connections:
-                        dy_off, dx_off, char = DIR_MAP[d]
-                        canvas[cy + dy_off][cx + dx_off] = char
+                for i, (piece_id, variant, dx, dy) in enumerate(pieces):
+                    symbol = cls.SYMBOLS.get(piece_id, "?")
+                    if i == 0:
+                        # Primary piece at center
+                        canvas[cy][cx] = symbol
+                    elif i == 1:
+                        # Secondary piece at bottom-right
+                        canvas[cy + 1][cx + 1] = symbol
+                    
+                    # Render connections
+                    if symbol not in ["D", "T"]:
+                        connections = variant.routing_info_at(dx, dy)
+                        for d in connections:
+                            dy_off, dx_off, char = DIR_MAP[d]
+                            # Use '=' for bridge horizontal connections
+                            if variant.is_bridge and char == "-":
+                                char = "="
+                            
+                            # If we are the secondary piece, we don't want to overwrite 
+                            # primary piece's connections unless necessary.
+                            # But wait, shared cell rules: bridge and tunnel are orthogonal.
+                            # So they won't share connection slots!
+                            if i == 0:
+                                canvas[cy + dy_off][cx + dx_off] = char
+                            else:
+                                # For secondary piece (Level 0), offset its connections if needed?
+                                # Actually, standard diagrams just show them in their slots.
+                                # UP/DOWN go to (cx, cy+/-1), LEFT/RIGHT go to (cx+/-1, cy).
+                                # If those slots are free, use them.
+                                if canvas[cy + dy_off][cx + dx_off] == " ":
+                                    canvas[cy + dy_off][cx + dx_off] = char
 
         # 2. Assemble Rows
         output = []

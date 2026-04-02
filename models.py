@@ -39,12 +39,14 @@ class PieceVariant:
                  footprint: Set[Tuple[int, int]], 
                  routing: Dict[Tuple[Tuple[int, int], Direction], Tuple[List[Tuple[int, int, Level]], Direction]],
                  tunnel_compatible: Set[Tuple[int, int]] = None,
+                 bridge_legs: Set[Tuple[int, int]] = None,
                  is_bridge: bool = False):
         self.piece_id = piece_id
         self.variant_id = variant_id
         self.footprint = footprint
         self.routing = routing
         self.tunnel_compatible = tunnel_compatible or set()
+        self.bridge_legs = bridge_legs or set()
         self.is_bridge = is_bridge
         self.char_map = {} # To be injected by factory
 
@@ -123,13 +125,10 @@ class Board:
                     if (dx, dy) not in variant.tunnel_compatible:
                         return False
                     
-                    # Also need to verify the bridge at this spot allows a tunnel.
-                    # This logic assumes we can retrieve the bridge's variant properties.
                     b_var, b_rx, b_ry = self.placed_pieces[bridge_id]
                     b_dx, b_dy = x - b_rx, y - b_ry
-                    # In our model, bridge legs are the non-corner squares of the bridge.
-                    # We'll need a way to flag which squares are legs vs corners.
-                    pass 
+                    if (b_dx, b_dy) not in b_var.bridge_legs:
+                        return False
 
             # Special case: Placing the Bridge itself
             if target_level == Level.BRIDGE:
@@ -137,8 +136,14 @@ class Board:
                 ground_id = self.get_occupant(x, y, Level.GROUND)
                 if ground_id:
                     # Corner of bridge cannot have anything under it.
+                    if (dx, dy) not in variant.bridge_legs:
+                        return False
+                    
                     # Legs can have tunnel-compatible pieces under them.
-                    pass
+                    g_var, g_rx, g_ry = self.placed_pieces[ground_id]
+                    g_dx, g_dy = x - g_rx, y - g_ry
+                    if (g_dx, g_dy) not in g_var.tunnel_compatible:
+                        return False
 
         return True
 
