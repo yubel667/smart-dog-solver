@@ -97,9 +97,10 @@ class BoardVisualizer:
         # 2. Assemble Rows
         output = []
         if with_indices:
-            output.append("      0     1     2     3     4")
+            header = "     " + "   ".join(str(i) for i in range(board.size))
+            output.append(header)
         
-        sep = "+---+---+---+---+---+"
+        sep = "+" + "---+" * board.size
         margin = "   " if with_indices else ""
         
         for r in range(board.size):
