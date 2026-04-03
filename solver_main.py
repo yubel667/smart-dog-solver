@@ -5,12 +5,15 @@ from solver import Solver
 from visualizer import BoardVisualizer
 
 def main():
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print("Usage: python3 solver_main.py <puzzle_number> [-v]")
         sys.exit(1)
 
     puzzle_num = sys.argv[1]
-    file_path = f"questions/{puzzle_num}.txt"
+    if puzzle_num[0] == "s":
+        file_path = f"solutions/{puzzle_num[1:]}.txt"
+    else:
+        file_path = f"questions/{puzzle_num}.txt"
     verbose = "-v" in sys.argv or "--verbose" in sys.argv
 
     if not os.path.exists(file_path):
