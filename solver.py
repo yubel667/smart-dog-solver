@@ -88,13 +88,29 @@ class Solver:
         if not dog_pos or not trainer_pos:
             return None
 
+        # Find Dog piece and its connections
+        dog_v, dog_rx, dog_ry = initial_board.placed_pieces["Dog"]
+        dog_conns = self.variant_ports[dog_v.variant_id].get((dog_pos[0] - dog_rx, dog_pos[1] - dog_ry), set())
+        
         result = None
         for start_dir in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
-            # Start at GROUND level
-            res = self._dfs(dog_pos, Level.GROUND, start_dir, initial_board, set(remaining_piece_ids), {(dog_pos[0], dog_pos[1], Level.GROUND)}, None, [(dog_pos[0], dog_pos[1], "Dog")])
-            if res:
-                result = res
-                break
+            # Valid if it's a defined connection OR if it leads to an empty ground square
+            is_valid_start = False
+            if dog_conns:
+                if start_dir in dog_conns:
+                    is_valid_start = True
+            else:
+                # If Dog is on a piece with no connections (like the Dog piece itself),
+                # we can move in any direction that is in bounds.
+                # Actually, the _dfs will check bounds and piece connections of the NEXT square.
+                is_valid_start = True
+            
+            if is_valid_start:
+                # Start at GROUND level
+                res = self._dfs(dog_pos, Level.GROUND, start_dir, initial_board, set(remaining_piece_ids), {(dog_pos[0], dog_pos[1], Level.GROUND)}, None, [(dog_pos[0], dog_pos[1], "Dog")])
+                if res:
+                    result = res
+                    break
         
         if self.verbose:
             print(f"Total states traversed: {self.visited_count}")
@@ -103,6 +119,22 @@ class Solver:
     def _get_piece_at(self, board, x, y, level):
         p_id = board.get_occupant(x, y, level)
         if p_id:
+            # Handle shared GROUND square: if level is GROUND and there's a bridge,
+            # we should check if there's another piece here (the tunnel).
+            if level == Level.GROUND:
+                v, rx, ry = board.placed_pieces[p_id]
+                if v.is_bridge:
+                    # Look for other pieces that are NOT the bridge
+                    for other_id, (ov, orx, ory) in board.placed_pieces.items():
+                        if other_id == p_id: continue
+                        # We don't check for ov.is_bridge because only one bridge exists
+                        for odx, ody in ov.footprint:
+                            if orx + odx == x and ory + ody == y:
+                                return ov, x - orx, y - ory
+                    
+                    # If no other piece, return the bridge itself (as a GROUND occupant)
+                    return v, x - rx, y - ry
+            
             v, rx, ry = board.placed_pieces[p_id]
             return v, x - rx, y - ry
         return None, 0, 0
@@ -111,7 +143,7 @@ class Solver:
         self.visited_count += 1
         if self.verbose and self.visited_count == self.next_print_n:
             from visualizer import BoardVisualizer
-            print(f"--- State {self.visited_count} ---")
+            print(f"--- State {self.visited_count} --- current pos {curr_pos}, current path {current_path}")
             print(BoardVisualizer.render(board))
             self.next_print_n = math.ceil(self.next_print_n * self.print_factor)
             if self.next_print_n <= self.visited_count:
@@ -130,6 +162,8 @@ class Solver:
 
             conns = self.variant_ports[piece_v.variant_id].get((dx, dy), set())
             if piece_v.piece_id == "Dog":
+                # Dog piece is just a marker, path continues in incoming_dir.
+                # BUT if it's the very first step, incoming_dir was one of the 4 start_dirs.
                 exit_dir = incoming_dir
             else:
                 back_dir = incoming_dir.reverse()
@@ -141,6 +175,7 @@ class Solver:
                 exit_dir = list(other_conns)[0]
             curr_piece_id = piece_v.piece_id
         else:
+            # Empty square: MUST go straight
             exit_dir = incoming_dir
             curr_piece_id = None
 
@@ -155,17 +190,24 @@ class Solver:
             if (next_x, next_y, next_level) in visited:
                 continue
             
+            # Transition level if the CURRENT piece allows it at the NEXT square
+            # Bridge pieces allow switching between GROUND and BRIDGE at legs.
+            
             # 1. Check for Trainer (always GROUND)
-            if next_level == Level.GROUND and board.get_occupant(next_x, next_y, Level.GROUND) == "Trainer":
-                if not remaining_piece_ids:
-                    if self._all_piece_squares_visited(board, visited | {(next_x, next_y, Level.GROUND)}):
-                        return board, current_path + [(next_x, next_y, "Trainer")]
+            trainer_piece_v, t_dx, t_dy = self._get_piece_at(board, next_x, next_y, Level.GROUND)
+            if trainer_piece_v and trainer_piece_v.piece_id == "Trainer":
+                if next_level == Level.GROUND:
+                    if not remaining_piece_ids:
+                        if self._all_piece_squares_visited(board, visited | {(next_x, next_y, Level.GROUND)}):
+                            return board, current_path + [(next_x, next_y, "Trainer")]
                 continue # Cannot pass through Trainer or visit it early
 
             # 2. Check for existing piece
             next_piece_v, n_dx, n_dy = self._get_piece_at(board, next_x, next_y, next_level)
             if next_piece_v:
                 conns = self.variant_ports[next_piece_v.variant_id].get((n_dx, n_dy), set())
+                # If we are coming from Dog, we don't check reverse connection because Dog is just a start point.
+                # Actually, the NEXT piece MUST have a port facing the Dog.
                 if exit_dir.reverse() in conns:
                     res = self._dfs(next_pos_2d, next_level, exit_dir, board, remaining_piece_ids, 
                                    visited | {(next_x, next_y, next_level)}, curr_piece_id, 
@@ -195,10 +237,11 @@ class Solver:
                 # 4. Try moving through truly empty square (only on GROUND)
                 if next_level == Level.GROUND and not board.get_occupant(next_x, next_y, Level.GROUND):
                     # Rules: "On Empty Squares, the path MUST go straight." (exit_dir == incoming_dir)
-                    # We allow this if there's no piece on GROUND.
-                    # If there's a bridge above, we can still move on empty ground.
+                    # IMPORTANT: Empty squares can be crossed multiple times. 
+                    # We don't add them to visited to allow crossings, 
+                    # but we are safe from infinite loops because turns require pieces which are in visited.
                     res = self._dfs(next_pos_2d, Level.GROUND, exit_dir, board, remaining_piece_ids, 
-                                   visited | {(next_x, next_y, Level.GROUND)}, curr_piece_id, 
+                                   visited, curr_piece_id, 
                                    current_path + [(next_x, next_y, None)])
                     if res: return res
         return None
@@ -206,6 +249,7 @@ class Solver:
     def _all_piece_squares_visited(self, board, visited):
         for p_id, (v, rx, ry) in board.placed_pieces.items():
             if p_id in ["Dog", "Trainer"]: continue
+            # Bridges are on Level 1, others on Level 0
             level = Level.BRIDGE if v.is_bridge else Level.GROUND
             for dx, dy in v.footprint:
                 conns = self.variant_ports[v.variant_id].get((dx, dy), set())
