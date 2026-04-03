@@ -107,7 +107,7 @@ class Solver:
             
             if is_valid_start:
                 # Start at GROUND level
-                res = self._dfs(dog_pos, Level.GROUND, start_dir, initial_board, set(remaining_piece_ids), {(dog_pos[0], dog_pos[1], Level.GROUND)}, None, [(dog_pos[0], dog_pos[1], "Dog")])
+                res = self._dfs(dog_pos, Level.GROUND, start_dir, initial_board, set(remaining_piece_ids), {(dog_pos[0], dog_pos[1], Level.GROUND)}, None, [(dog_pos[0], dog_pos[1], "Dog", start_dir)])
                 if res:
                     result = res
                     break
@@ -115,6 +115,20 @@ class Solver:
         if self.verbose:
             print(f"Total states traversed: {self.visited_count}")
         return result
+
+    def _is_path_compatible(self, variant, root_x, root_y, current_path, current_exit_dir):
+        # Check if the piece we are placing at root_x, root_y is compatible 
+        # with any squares already in the Dog's path.
+        for i, (px, py, p_id, in_dir) in enumerate(current_path):
+            dx, dy = px - root_x, py - root_y
+            if (dx, dy) in variant.footprint:
+                # Square was traversed. Must allow in_dir and out_dir.
+                out_dir = current_path[i+1][3] if i < len(current_path) - 1 else current_exit_dir
+                
+                conns = self.variant_ports[variant.variant_id].get((dx, dy), set())
+                if in_dir.reverse() not in conns or out_dir not in conns:
+                    return False
+        return True
 
     def _get_piece_at(self, board, x, y, level):
         p_id = board.get_occupant(x, y, level)
@@ -211,7 +225,7 @@ class Solver:
                 if exit_dir.reverse() in conns:
                     res = self._dfs(next_pos_2d, next_level, exit_dir, board, remaining_piece_ids, 
                                    visited | {(next_x, next_y, next_level)}, curr_piece_id, 
-                                   current_path + [(next_x, next_y, next_piece_v.piece_id)])
+                                   current_path + [(next_x, next_y, next_piece_v.piece_id, exit_dir)])
                     if res: return res
             else:
                 # 3. Square is empty on this level. Try placing remaining pieces.
@@ -224,13 +238,17 @@ class Solver:
                         for (v_dx, v_dy) in v.footprint:
                             root_x, root_y = next_x - v_dx, next_y - v_dy
                             if board.can_place(v, root_x, root_y):
+                                # Check compatibility with previous path squares covered by this piece
+                                if not self._is_path_compatible(v, root_x, root_y, current_path, exit_dir):
+                                    continue
+
                                 conns = self.variant_ports[v.variant_id].get((v_dx, v_dy), set())
                                 if exit_dir.reverse() in conns:
                                     board.place(v, root_x, root_y)
                                     res = self._dfs(next_pos_2d, next_level, exit_dir, board, 
                                                    remaining_piece_ids - {p_id}, 
                                                    visited | {(next_x, next_y, next_level)}, 
-                                                   curr_piece_id, current_path + [(next_x, next_y, p_id)])
+                                                   curr_piece_id, current_path + [(next_x, next_y, p_id, exit_dir)])
                                     if res: return res
                                     board.remove(p_id)
                 
@@ -242,7 +260,7 @@ class Solver:
                     # but we are safe from infinite loops because turns require pieces which are in visited.
                     res = self._dfs(next_pos_2d, Level.GROUND, exit_dir, board, remaining_piece_ids, 
                                    visited, curr_piece_id, 
-                                   current_path + [(next_x, next_y, None)])
+                                   current_path + [(next_x, next_y, None, exit_dir)])
                     if res: return res
         return None
 

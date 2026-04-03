@@ -5,7 +5,7 @@ from solver import Solver
 from visualizer import BoardVisualizer
 
 def main():
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
         print("Usage: python3 solver_main.py <puzzle_number> [-v]")
         sys.exit(1)
 
@@ -37,7 +37,8 @@ def main():
             print(BoardVisualizer.render(result_board))
             print("\n--- Obstacle Moving Order ---")
             obstacles = []
-            for _, _, p_id in path:
+            for item in path:
+                p_id = item[2]
                 if p_id and (not obstacles or obstacles[-1] != p_id):
                     obstacles.append(p_id)
             print(" -> ".join(obstacles))

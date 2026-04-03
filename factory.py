@@ -112,9 +112,7 @@ class PieceFactory:
         footprint = {(0,0), (1,0), (2,0)}
         tunnel_compatible = {(0,0), (2,0)}
         connections = {
-            (0,0): {Direction.LEFT, Direction.RIGHT},
-            (1,0): {Direction.LEFT, Direction.RIGHT},
-            (2,0): {Direction.LEFT, Direction.RIGHT}
+            (1,0): {Direction.UP, Direction.DOWN}
         }
         return cls.generate_rotations("LightBlueHurdle", footprint, cls.build_routing(connections), tunnel_compatible=tunnel_compatible)
 

@@ -40,7 +40,7 @@ class TestBoardRenderer(unittest.TestCase):
         board.place(get_v("PurpleHurdle", "_Rot0"), 2, 4)
 
         rendered = BoardVisualizer.render(board, with_indices=False)
-        with open("expected_solution_1.txt", "r") as f:
+        with open("solutions/1.txt", "r") as f:
             expected = f.read().strip()
         
         actual_lines = rendered.strip().split("\n")
