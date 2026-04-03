@@ -6,11 +6,12 @@ from visualizer import BoardVisualizer
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 solver_main.py <puzzle_number>")
+        print("Usage: python3 solver_main.py <puzzle_number> [-v]")
         sys.exit(1)
 
     puzzle_num = sys.argv[1]
     file_path = f"questions/{puzzle_num}.txt"
+    verbose = "-v" in sys.argv or "--verbose" in sys.argv
 
     if not os.path.exists(file_path):
         print(f"Error: Puzzle file {file_path} not found.")
@@ -25,7 +26,7 @@ def main():
         
         solver = Solver()
         print("--- Solving ---")
-        result = solver.solve(board, remaining_pieces)
+        result = solver.solve(board, remaining_pieces, verbose=verbose)
 
         if result:
             result_board, path = result

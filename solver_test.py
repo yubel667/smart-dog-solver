@@ -30,11 +30,11 @@ class TestSolver(unittest.TestCase):
         remaining_pieces = ["YellowSeesaw", "LightBlueHurdle", "PurpleHurdle"]
 
         solver = Solver()
-        result_board = solver.solve(board, remaining_pieces)
+        result = solver.solve(board, remaining_pieces)
+        self.assertIsNotNone(result, "Solver should find a solution.")
+        result_board, path = result
 
         print(BoardVisualizer.render(result_board, with_indices=False))
-
-        self.assertIsNotNone(result_board, "Solver should find a solution.")
 
         # Check if all pieces are placed
         for piece_id in ["Dog", "Trainer", "BlueBridge", "OrangeTube", "RedTube", 

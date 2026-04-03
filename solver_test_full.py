@@ -27,9 +27,9 @@ class TestSolver(unittest.TestCase):
 
         solver = Solver()
         # remaining_pieces is empty because all are placed
-        result_board = solver.solve(board, [])
+        result = solver.solve(board, [])
 
-        self.assertIsNotNone(result_board, "Solver should find the path for the full solution.")
+        self.assertIsNotNone(result, "Solver should find the path for the full solution.")
 
 if __name__ == "__main__":
     unittest.main()

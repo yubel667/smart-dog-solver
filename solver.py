@@ -1,10 +1,15 @@
+import math
 from models import Board, Direction, Level, PieceVariant
 from factory import PieceFactory
 
 class Solver:
-    def __init__(self):
+    def __init__(self, print_factor=1.5):
         self.factory = PieceFactory()
         self.all_variants = self.factory.get_all_piece_variants()
+        self.print_factor = print_factor
+        self.verbose = False
+        self.visited_count = 0
+        self.next_print_n = 1
         
         self.piece_ports_base = {
             "OrangeTube": {
@@ -69,7 +74,11 @@ class Solver:
                         d = self.factory.rotate_dir(d)
                     self.yellow_entries[v.variant_id] = (c[0], c[1], d)
 
-    def solve(self, initial_board, remaining_piece_ids):
+    def solve(self, initial_board, remaining_piece_ids, verbose=False):
+        self.verbose = verbose
+        self.visited_count = 0
+        self.next_print_n = 1
+
         dog_pos = None
         trainer_pos = None
         for p_id, (v, rx, ry) in initial_board.placed_pieces.items():
@@ -79,11 +88,17 @@ class Solver:
         if not dog_pos or not trainer_pos:
             return None
 
+        result = None
         for start_dir in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
             # Start at GROUND level
             res = self._dfs(dog_pos, Level.GROUND, start_dir, initial_board, set(remaining_piece_ids), {(dog_pos[0], dog_pos[1], Level.GROUND)}, None, [(dog_pos[0], dog_pos[1], "Dog")])
-            if res: return res
-        return None
+            if res:
+                result = res
+                break
+        
+        if self.verbose:
+            print(f"Total states traversed: {self.visited_count}")
+        return result
 
     def _get_piece_at(self, board, x, y, level):
         p_id = board.get_occupant(x, y, level)
@@ -93,6 +108,15 @@ class Solver:
         return None, 0, 0
 
     def _dfs(self, curr_pos, curr_level, incoming_dir, board, remaining_piece_ids, visited, prev_piece_id, current_path):
+        self.visited_count += 1
+        if self.verbose and self.visited_count == self.next_print_n:
+            from visualizer import BoardVisualizer
+            print(f"--- State {self.visited_count} ---")
+            print(BoardVisualizer.render(board))
+            self.next_print_n = math.ceil(self.next_print_n * self.print_factor)
+            if self.next_print_n <= self.visited_count:
+                self.next_print_n = self.visited_count + 1
+
         x, y = curr_pos
         piece_v, dx, dy = self._get_piece_at(board, x, y, curr_level)
         
