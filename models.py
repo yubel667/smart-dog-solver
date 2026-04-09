@@ -89,6 +89,8 @@ class Board:
         # grid[x][y] = {Level.GROUND: piece_id, Level.BRIDGE: piece_id}
         self.grid = [[{} for _ in range(size)] for _ in range(size)]
         self.placed_pieces = {} # piece_id -> (PieceVariant, root_x, root_y)
+        self.place_count = 0
+        self.remove_count = 0
 
     def is_in_bounds(self, x: int, y: int) -> bool:
         return 0 <= x < self.size and 0 <= y < self.size
@@ -149,6 +151,7 @@ class Board:
 
     def place(self, variant: PieceVariant, root_x: int, root_y: int):
         """Places a piece and updates the grid state."""
+        self.place_count+=1
         for dx, dy in variant.footprint:
             x, y = root_x + dx, root_y + dy
             # Dark Blue logic: Corner is Level 1, Legs are Level 1.
@@ -163,7 +166,7 @@ class Board:
         """Removes a piece and clears its grid entries."""
         if piece_id not in self.placed_pieces:
             return
-        
+        self.remove_count+=1
         variant, root_x, root_y = self.placed_pieces.pop(piece_id)
         for dx, dy in variant.footprint:
             x, y = root_x + dx, root_y + dy

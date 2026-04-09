@@ -113,7 +113,7 @@ class Solver:
                     break
         
         if self.verbose:
-            print(f"Total states traversed: {self.visited_count}")
+            print(f"Total states traversed: {self.visited_count}, total placed = {initial_board.place_count}, total removed = {initial_board.remove_count}")
         return result
 
     def _is_path_compatible(self, variant, root_x, root_y, current_path, current_exit_dir):
@@ -157,7 +157,7 @@ class Solver:
         self.visited_count += 1
         if self.verbose and self.visited_count == self.next_print_n:
             from visualizer import BoardVisualizer
-            print(f"--- State {self.visited_count} --- current pos {curr_pos}, current path {current_path}")
+            print(f"--- Placed = {board.place_count}, Removed = {board.remove_count}, Visited = {self.visited_count}")
             print(BoardVisualizer.render(board))
             self.next_print_n = math.ceil(self.next_print_n * self.print_factor)
             if self.next_print_n <= self.visited_count:
